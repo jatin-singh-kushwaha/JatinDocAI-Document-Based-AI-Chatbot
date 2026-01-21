@@ -223,11 +223,4 @@ This is the same design used in:
 ## 👤 Author
 
 **Jatin Singh Kushwaha**  
-B.Tech CSE | Full Stack Developer
-
----
-
-## 📄 License
-
-MIT License
 
