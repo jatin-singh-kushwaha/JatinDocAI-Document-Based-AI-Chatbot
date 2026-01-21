@@ -1,0 +1,165 @@
+import os
+import docx
+import PyPDF2
+import chromadb
+from chromadb.utils import embedding_functions
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# -----------------------------
+# ENV + GEMINI
+# -----------------------------
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("models/gemini-flash-latest")
+
+# -----------------------------
+# FILE READERS
+# -----------------------------
+def read_text_file(file_path: str):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+def read_pdf_file(file_path: str):
+    text = ""
+    with open(file_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+    return text
+
+def read_docx_file(file_path: str):
+    doc = docx.Document(file_path)
+    return "\n".join(p.text for p in doc.paragraphs)
+
+def read_document(file_path: str):
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == ".txt":
+        return read_text_file(file_path)
+    elif ext == ".pdf":
+        return read_pdf_file(file_path)
+    elif ext == ".docx":
+        return read_docx_file(file_path)
+    else:
+        raise ValueError("Unsupported file type")
+
+# -----------------------------
+# CHUNKING
+# -----------------------------
+def split_text(text: str, chunk_size: int = 500):
+    sentences = text.replace("\n", " ").split(". ")
+    chunks, current, size = [], [], 0
+
+    for s in sentences:
+        s = s.strip()
+        if not s:
+            continue
+        if not s.endswith("."):
+            s += "."
+        if size + len(s) > chunk_size and current:
+            chunks.append(" ".join(current))
+            current, size = [s], len(s)
+        else:
+            current.append(s)
+            size += len(s)
+
+    if current:
+        chunks.append(" ".join(current))
+    return chunks
+
+# -----------------------------
+# CHROMA
+# -----------------------------
+client = chromadb.PersistentClient(path="chroma_db")
+
+embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+    model_name="all-MiniLM-L6-v2"
+)
+
+collection = client.get_or_create_collection(
+    name="documents_collection",
+    embedding_function=embedding_fn
+)
+
+# -----------------------------
+# INGESTION
+# -----------------------------
+def process_document(file_path: str):
+    content = read_document(file_path)
+    chunks = split_text(content)
+    filename = os.path.basename(file_path)
+
+    ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
+    metadatas = [{"source": filename, "chunk": i} for i in range(len(chunks))]
+
+    return ids, chunks, metadatas
+
+def add_to_collection(ids, texts, metadatas):
+    if texts:
+        collection.add(
+            documents=texts,
+            metadatas=metadatas,
+            ids=ids
+        )
+
+# 🔥 THIS IS THE IMPORTANT NEW FUNCTION
+def ingest_existing_documents(upload_dir="uploads"):
+    if not os.path.exists(upload_dir):
+        return
+
+    for filename in os.listdir(upload_dir):
+        path = os.path.join(upload_dir, filename)
+        if not os.path.isfile(path):
+            continue
+        try:
+            ids, texts, metas = process_document(path)
+            add_to_collection(ids, texts, metas)
+            print(f"Ingested: {filename}")
+        except Exception as e:
+            print(f"Failed {filename}: {e}")
+
+# -----------------------------
+# RETRIEVAL
+# -----------------------------
+def semantic_search(query, n_results=2, threshold=0.6):
+    results = collection.query(query_texts=[query], n_results=n_results)
+    if min(results["distances"][0]) > threshold:
+        return None
+    return results
+
+def get_context_with_sources(results):
+    context = "\n\n".join(results["documents"][0])
+    sources = [
+        f"{m['source']} (chunk {m['chunk']})"
+        for m in results["metadatas"][0]
+    ]
+    return context, sources
+
+def rag_query(query):
+    results = semantic_search(query)
+    if results is None:
+        return "I cannot answer this from the provided document.", []
+    return get_context_with_sources(results)
+
+# -----------------------------
+# GENERATION (GEMINI)
+# -----------------------------
+def generate_response(query, context):
+    prompt = f"""
+You are a strict document-based assistant.
+
+Answer ONLY from the given context.
+If not found, say:
+"I cannot answer this from the provided document."
+
+Context:
+{context}
+
+Question:
+{query}
+"""
+    response = model.generate_content(
+        prompt,
+        generation_config={"temperature": 0, "max_output_tokens": 1800}
+    )
+    return response.text
