@@ -59,7 +59,7 @@ JatinDocAI/
 ## 1) Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/JatinDocAI.git
+git clone https://github.com/jatin-singh-kushwaha/JatinDocAI-Document-Based-AI-Chatbot.git
 cd JatinDocAI
 ```
 
