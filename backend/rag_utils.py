@@ -11,7 +11,7 @@ import google.generativeai as genai
 # -----------------------------
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("models/gemini-flash-latest")
+model = genai.GenerativeModel("models/gemini-flash-lite-latest")
 
 # -----------------------------
 # FILE READERS
@@ -102,7 +102,7 @@ def add_to_collection(ids, texts, metadatas):
             ids=ids
         )
 
-# 🔥 THIS IS THE IMPORTANT NEW FUNCTION
+# THIS IS THE IMPORTANT NEW FUNCTION
 def ingest_existing_documents(upload_dir="uploads"):
     if not os.path.exists(upload_dir):
         return

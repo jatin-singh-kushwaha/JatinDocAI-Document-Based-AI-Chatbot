@@ -156,10 +156,8 @@ Frontend runs at `http://localhost:5173`.
 |---|---|
 | Database Management System | What is normalization? |
 | Cyber Security | What is phishing? |
-| Internet of Things | What is IoT? |
 | Machine Learning | What is supervised learning? |
 | History of India | Who was Rani Lakshmi Bai? |
-| History of Modern India | Who was the founder of the autonomous kingdom of Awadh? |
 
 ---
 
