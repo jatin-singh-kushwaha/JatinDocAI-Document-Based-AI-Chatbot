@@ -91,8 +91,6 @@ Including:
 - Cyber Security
 - Database Management System
 - History of India
-- History of Modern India
-- Internet of Things
 - Machine Learning
 
 ---

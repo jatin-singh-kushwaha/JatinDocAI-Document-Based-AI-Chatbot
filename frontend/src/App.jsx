@@ -38,7 +38,7 @@ function App() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "bot", text: "❌ Error contacting server", sources: [] }
+        { role: "bot", text: "Server error", sources: [] }
       ]);
     } finally {
       setLoading(false);
@@ -51,8 +51,11 @@ function App() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.container}>
-        <h1 style={styles.title}>📚 JatinDocAI — Document-Based AI Chatbot</h1>
+      <div style={styles.appCard}>
+        <div style={styles.header}>
+          <div style={styles.logo}>JatinDocAI</div>
+          <div style={styles.tagline}>Document Intelligence System</div>
+        </div>
 
         <div style={styles.chatBox}>
           {messages.map((msg, i) => (
@@ -60,26 +63,31 @@ function App() {
               key={i}
               style={{
                 ...styles.bubble,
-                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                background:
-                  msg.role === "user" ? "#2563eb" : "#e5e7eb",
-                color: msg.role === "user" ? "#fff" : "#111",
+                ...(msg.role === "user"
+                  ? styles.userBubble
+                  : styles.botBubble),
               }}
             >
               {msg.text}
 
-              {msg.sources && msg.sources.length > 0 && (
+              {msg.role === "bot" && (
                 <div style={styles.sources}>
-                  {msg.sources.map((s, idx) => (
-                    <div key={idx}>• {s}</div>
-                  ))}
+                  {msg.sources.length > 0 ? (
+                    msg.sources.map((s, idx) => (
+                      <span key={idx} style={styles.sourceChip}>
+                        {s}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={styles.noSource}>No sources found</span>
+                  )}
                 </div>
               )}
             </div>
           ))}
 
           {loading && (
-            <div style={{ ...styles.bubble, background: "#e5e7eb" }}>
+            <div style={{ ...styles.bubble, ...styles.botBubble }}>
               Thinking...
             </div>
           )}
@@ -87,24 +95,21 @@ function App() {
           <div ref={bottomRef} />
         </div>
 
-        <div style={styles.inputBox}>
+        <div style={styles.inputWrapper}>
           <input
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a question..."
+            placeholder="Ask a question from your knowledge base..."
             style={styles.input}
             onKeyDown={(e) => e.key === "Enter" && handleAsk()}
           />
           <button
-            style={{
-              ...styles.primaryBtn,
-              opacity: loading ? 0.6 : 1,
-            }}
             onClick={handleAsk}
             disabled={loading}
+            style={styles.sendBtn}
           >
-            Send
+            →
           </button>
         </div>
       </div>
@@ -115,65 +120,129 @@ function App() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f3f4f6",
+    background:
+      "radial-gradient(circle at top, #0f172a 0%, #020617 60%)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontFamily: "Inter, Arial, sans-serif",
+    fontFamily: "Inter, system-ui, sans-serif",
+    color: "#fff",
   },
-  container: {
+
+  appCard: {
     width: "100%",
-    maxWidth: "800px",
-    height: "90vh",
+    maxWidth: "900px",
+    height: "88vh",
     display: "flex",
     flexDirection: "column",
+    background: "rgba(255,255,255,0.04)",
+    borderRadius: "20px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow:
+      "0 0 0 1px rgba(255,255,255,0.05), 0 30px 80px rgba(0,0,0,0.7)",
+    backdropFilter: "blur(20px)",
+    overflow: "hidden",
   },
-  title: {
-    textAlign: "center",
-    marginBottom: "10px",
+
+  header: {
+    padding: "20px 24px",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
   },
+
+  logo: {
+    fontSize: "20px",
+    fontWeight: "600",
+    letterSpacing: "0.5px",
+  },
+
+  tagline: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    marginTop: "2px",
+  },
+
   chatBox: {
     flex: 1,
-    background: "#ffffff",
-    borderRadius: "12px",
-    padding: "16px",
-    boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
+    padding: "24px",
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "14px",
   },
+
   bubble: {
-    maxWidth: "70%",
-    padding: "10px 14px",
-    borderRadius: "16px",
-    lineHeight: "1.4",
-    fontSize: "15px",
+    maxWidth: "68%",
+    padding: "14px 18px",
+    borderRadius: "14px",
+    lineHeight: "1.55",
+    fontSize: "14.5px",
+    whiteSpace: "pre-wrap",
   },
+
+  userBubble: {
+    alignSelf: "flex-end",
+    background:
+      "linear-gradient(135deg, #2563eb, #7c3aed)",
+    boxShadow: "0 8px 24px rgba(124,58,237,0.35)",
+  },
+
+  botBubble: {
+    alignSelf: "flex-start",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+  },
+
   sources: {
-    marginTop: "6px",
-    fontSize: "12px",
-    color: "#374151",
+    marginTop: "10px",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
   },
-  inputBox: {
+
+  sourceChip: {
+    fontSize: "11px",
+    padding: "4px 10px",
+    borderRadius: "999px",
+    background: "rgba(0,0,0,0.4)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    color: "#a5b4fc",
+  },
+
+  noSource: {
+    fontSize: "11px",
+    color: "#94a3b8",
+  },
+
+  inputWrapper: {
+    padding: "18px",
+    borderTop: "1px solid rgba(255,255,255,0.08)",
     display: "flex",
     gap: "10px",
-    marginTop: "10px",
+    background: "rgba(2,6,23,0.9)",
   },
+
   input: {
     flex: 1,
-    padding: "12px",
-    borderRadius: "20px",
-    border: "1px solid #d1d5db",
-    fontSize: "15px",
-  },
-  primaryBtn: {
-    background: "#2563eb",
+    padding: "14px 18px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "#020617",
     color: "#fff",
+    fontSize: "14px",
+    outline: "none",
+  },
+
+  sendBtn: {
+    width: "46px",
+    height: "46px",
+    borderRadius: "12px",
     border: "none",
-    padding: "10px 18px",
-    borderRadius: "20px",
+    background:
+      "linear-gradient(135deg,#2563eb,#7c3aed)",
+    color: "#fff",
+    fontSize: "20px",
     cursor: "pointer",
+    boxShadow: "0 10px 30px rgba(124,58,237,0.4)",
   },
 };
 

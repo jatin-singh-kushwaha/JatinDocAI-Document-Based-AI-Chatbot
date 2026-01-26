@@ -4,14 +4,16 @@ import PyPDF2
 import chromadb
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 
 # -----------------------------
 # ENV + GEMINI
 # -----------------------------
 load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("models/gemini-flash-lite-latest")
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# You were right: this model gives better answers
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 # -----------------------------
 # FILE READERS
@@ -25,7 +27,9 @@ def read_pdf_file(file_path: str):
     with open(file_path, "rb") as file:
         reader = PyPDF2.PdfReader(file)
         for page in reader.pages:
-            text += page.extract_text() + "\n"
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
     return text
 
 def read_docx_file(file_path: str):
@@ -44,9 +48,9 @@ def read_document(file_path: str):
         raise ValueError("Unsupported file type")
 
 # -----------------------------
-# CHUNKING
+# CHUNKING (your logic, improved)
 # -----------------------------
-def split_text(text: str, chunk_size: int = 500):
+def split_text(text: str, chunk_size: int = 600):
     sentences = text.replace("\n", " ").split(". ")
     chunks, current, size = [], [], 0
 
@@ -70,13 +74,13 @@ def split_text(text: str, chunk_size: int = 500):
 # -----------------------------
 # CHROMA
 # -----------------------------
-client = chromadb.PersistentClient(path="chroma_db")
+chroma_client = chromadb.PersistentClient(path="chroma_db")
 
 embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
     model_name="all-MiniLM-L6-v2"
 )
 
-collection = client.get_or_create_collection(
+collection = chroma_client.get_or_create_collection(
     name="documents_collection",
     embedding_function=embedding_fn
 )
@@ -89,8 +93,8 @@ def process_document(file_path: str):
     chunks = split_text(content)
     filename = os.path.basename(file_path)
 
-    ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
-    metadatas = [{"source": filename, "chunk": i} for i in range(len(chunks))]
+    ids = [f"{filename}_{i}" for i in range(len(chunks))]
+    metadatas = [{"source": filename} for _ in chunks]
 
     return ids, chunks, metadatas
 
@@ -102,7 +106,6 @@ def add_to_collection(ids, texts, metadatas):
             ids=ids
         )
 
-# THIS IS THE IMPORTANT NEW FUNCTION
 def ingest_existing_documents(upload_dir="uploads"):
     if not os.path.exists(upload_dir):
         return
@@ -121,18 +124,20 @@ def ingest_existing_documents(upload_dir="uploads"):
 # -----------------------------
 # RETRIEVAL
 # -----------------------------
-def semantic_search(query, n_results=2, threshold=0.6):
-    results = collection.query(query_texts=[query], n_results=n_results)
-    if min(results["distances"][0]) > threshold:
+def semantic_search(query, n_results=3):
+    results = collection.query(
+        query_texts=[query],
+        n_results=n_results
+    )
+    if not results["documents"][0]:
         return None
     return results
 
 def get_context_with_sources(results):
     context = "\n\n".join(results["documents"][0])
-    sources = [
-        f"{m['source']} (chunk {m['chunk']})"
-        for m in results["metadatas"][0]
-    ]
+    sources = list(set(
+        m["source"] for m in results["metadatas"][0]
+    ))
     return context, sources
 
 def rag_query(query):
@@ -142,15 +147,18 @@ def rag_query(query):
     return get_context_with_sources(results)
 
 # -----------------------------
-# GENERATION (GEMINI)
+# GENERATION (GEMINI 2.5)
 # -----------------------------
 def generate_response(query, context):
     prompt = f"""
 You are a strict document-based assistant.
 
 Answer ONLY from the given context.
-If not found, say:
+If not found, say exactly:
 "I cannot answer this from the provided document."
+
+Do not use outside knowledge.
+Do not hallucinate.
 
 Context:
 {context}
@@ -158,8 +166,13 @@ Context:
 Question:
 {query}
 """
-    response = model.generate_content(
-        prompt,
-        generation_config={"temperature": 0, "max_output_tokens": 1800}
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
+            "temperature": 0,
+            "max_output_tokens": 1800
+        }
     )
     return response.text

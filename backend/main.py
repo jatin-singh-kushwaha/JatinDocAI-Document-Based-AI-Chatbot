@@ -26,7 +26,7 @@ class QuestionRequest(BaseModel):
 def startup():
     ingest_existing_documents("uploads")
 
-@app.get("/health")
+@app.get("/")
 def health():
     return {"status": "ok"}
 
@@ -38,4 +38,7 @@ def ask_question(data: QuestionRequest):
         return {"answer": context, "sources": []}
 
     answer = generate_response(data.question, context)
+    if "I cannot answer this" in answer:
+        sources = []
+
     return {"answer": answer, "sources": sources}
