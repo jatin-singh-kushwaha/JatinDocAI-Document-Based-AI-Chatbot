@@ -3,6 +3,10 @@
 JatinDocAI is a full-stack **Retrieval-Augmented Generation (RAG)** system built by **Jatin Singh Kushwaha** that answers questions **strictly from your own documents** (PDF / DOCX / TXT) with **zero hallucination**.
 
 ---
+## Demo Images
+![My Image](images/demo1.png)
+![My Image](images/demo2.png)
+---
 
 ## 🧠 Tech Stack
 
