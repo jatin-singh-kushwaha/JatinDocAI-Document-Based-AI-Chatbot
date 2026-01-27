@@ -111,8 +111,6 @@ On startup, the system automatically indexes all documents, e.g.:
 - Ingested: `cyber_security_for_beginners_ebook.pdf`
 - Ingested: `Database-Management-System.pdf`
 - Ingested: `History of India.pdf`
-- Ingested: `History of Modern India (2020 edition - Bipan Chandra.pdf`
-- Ingested: `Internet of Things.pdf`
 - Ingested: `MLBOOK.pdf`
 
 This confirms:
