@@ -210,12 +210,6 @@ JatinDocAI demonstrates real AI engineering:
 - Hallucination prevention
 - Full-stack integration
 
-This is the same design used in:
-
-- Enterprise knowledge bots
-- AI search tools
-- Research assistants
-
 ---
 
 ## 👤 Author
