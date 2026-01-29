@@ -1,6 +1,6 @@
 # 🤖 JatinDocAI — Document-Based AI Chatbot
 
-JatinDocAI is a full-stack **Retrieval-Augmented Generation (RAG)** system built by **Jatin Singh Kushwaha** that answers questions **strictly from your own documents** (PDF / DOCX / TXT) with **zero hallucination**.
+JatinDocAI is a full-stack **Retrieval-Augmented Generation (RAG)** system that answers questions **strictly from your own documents** (PDF / DOCX / TXT) with **zero hallucination**.
 
 ---
 ## Demo Images
